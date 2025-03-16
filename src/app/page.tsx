@@ -43,24 +43,28 @@ export default function Home() {
 
   useEffect(() => {
     if (counter >= 10) {
-      router.push('/secret');
+      router.push("/secret");
     }
   }, [counter, router]);
 
   const handleTitleClick = () => {
     if (counter < 10) {
-      setCounter(prev => prev + 1);
+      setCounter((prev) => prev + 1);
     }
   };
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900">
-      <h1 
-        className="text-4xl font-bold mb-8 cursor-pointer" 
-        onClick={handleTitleClick}
-      >
+      <h1
+        className="text-4xl font-bold mb-8 cursor-pointer"
+        onClick={handleTitleClick}>
         {text}
-        <span className={`${showCursor ? 'opacity-100' : 'opacity-0'} transition-opacity`}>|</span>
+        <span
+          className={`${
+            showCursor ? "opacity-100" : "opacity-0"
+          } transition-opacity`}>
+          |
+        </span>
       </h1>
       <div className="flex flex-col gap-4">
         <Link
@@ -86,10 +90,17 @@ export default function Home() {
         </Link>
       </div>
       {counter > 0 && (
-        <div className="fixed bottom-4 text-white text-xl">
-          {counter}
-        </div>
+        <div className="fixed bottom-4 text-white text-xl">{counter}</div>
       )}
+      <div className="mt-12">
+        <Link
+          href="https://www.canva.com/design/DAGhsZQerpE/Wo0Vb4lNeW1bSyE3wYk5FQ/view?utm_content=DAGhsZQerpE&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h4f02e1559f"
+          className="dark:text-gray-300 dark:hover:text-gray-100 text-gray-700 hover:text-gray-500 transition-colors flex items-center gap-2 text-xl"
+          target="_blank">
+          <span>&bull;</span>
+          <span className="underline">How to regocnize a Wikipedia Text</span>
+        </Link>
+      </div>
     </main>
   );
 }
