@@ -6,56 +6,71 @@ export default function Secret() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
+  const lastTime = useRef<number>(0);
 
   const bird = useRef({ y: 150, velocity: 0 });
   const pipes = useRef<{ x: number; height: number }[]>([]);
-const gameLoopRef = useRef<number>(0); 
-
-  const jump = () => {
-    bird.current.velocity = -8;
-  };
+  const gameLoopRef = useRef<number>();
 
   useEffect(() => {
+    // Set canvas size based on screen
+    const updateCanvasSize = () => {
+      if (!canvasRef.current) return;
+      canvasRef.current.width = Math.min(800, window.innerWidth - 20);
+      canvasRef.current.height = Math.min(400, window.innerHeight - 100);
+    };
+
+    updateCanvasSize();
+    window.addEventListener('resize', updateCanvasSize);
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const gameLoop = () => {
+    const gameLoop = (timestamp: number) => {
       if (!canvas || !ctx) return;
+
+      // Calculate delta time for consistent speed across devices
+      const deltaTime = timestamp - (lastTime.current || timestamp);
+      lastTime.current = timestamp;
 
       // Clear canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Update bird
-      bird.current.velocity += 0.5;
-      bird.current.y += bird.current.velocity;
+      // Update bird with deltaTime
+      bird.current.velocity += 0.3 * (deltaTime / 16); // Normalized gravity
+      bird.current.y += bird.current.velocity * (deltaTime / 16);
 
-      // Draw bird
+      // Draw bird (scaled for mobile)
+      const birdSize = Math.min(30, canvas.width / 20);
       ctx.fillStyle = 'yellow';
-      ctx.fillRect(50, bird.current.y, 30, 30);
+      ctx.fillRect(50, bird.current.y, birdSize, birdSize);
 
       // Update and draw pipes
+      const gapSize = canvas.height / 3;
+      const pipeWidth = Math.min(50, canvas.width / 12);
+
       if (pipes.current.length === 0 || pipes.current[pipes.current.length - 1].x < canvas.width - 200) {
         pipes.current.push({
           x: canvas.width,
-          height: Math.random() * (canvas.height - 200) + 100,
+          height: Math.random() * (canvas.height - gapSize - 100) + 100,
         });
       }
 
-      pipes.current.forEach((pipe) => {
-        pipe.x -= 2;
+      pipes.current.forEach((pipe, index) => {
+        pipe.x -= 2 * (deltaTime / 16); // Normalized speed
 
         // Draw pipes
         ctx.fillStyle = 'green';
-        ctx.fillRect(pipe.x, 0, 50, pipe.height - 100);
-        ctx.fillRect(pipe.x, pipe.height + 100, 50, canvas.height);
+        ctx.fillRect(pipe.x, 0, pipeWidth, pipe.height - gapSize/2);
+        ctx.fillRect(pipe.x, pipe.height + gapSize/2, pipeWidth, canvas.height);
 
         // Collision detection
         if (
-          50 < pipe.x + 50 &&
-          50 + 30 > pipe.x &&
-          (bird.current.y < pipe.height - 100 || bird.current.y + 30 > pipe.height + 100)
+          50 < pipe.x + pipeWidth &&
+          50 + birdSize > pipe.x &&
+          (bird.current.y < pipe.height - gapSize/2 || bird.current.y + birdSize > pipe.height + gapSize/2)
         ) {
           setGameOver(true);
         }
@@ -66,10 +81,8 @@ const gameLoopRef = useRef<number>(0);
         }
       });
 
-      // Remove off-screen pipes
-      pipes.current = pipes.current.filter(pipe => pipe.x > -50);
+      pipes.current = pipes.current.filter(pipe => pipe.x > -pipeWidth);
 
-      // Check boundaries
       if (bird.current.y > canvas.height || bird.current.y < 0) {
         setGameOver(true);
       }
@@ -79,52 +92,59 @@ const gameLoopRef = useRef<number>(0);
       }
     };
 
+    const jump = () => {
+      bird.current.velocity = -6;
+    };
+
     gameLoopRef.current = requestAnimationFrame(gameLoop);
 
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
+        e.preventDefault(); // Prevent page scrolling
         jump();
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     canvas.addEventListener('click', jump);
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      jump();
+    });
 
     return () => {
+      window.removeEventListener('resize', updateCanvasSize);
       window.removeEventListener('keydown', handleKeyPress);
       canvas.removeEventListener('click', jump);
+      canvas.removeEventListener('touchstart', jump);
       if (gameLoopRef.current) {
         cancelAnimationFrame(gameLoopRef.current);
       }
     };
   }, [gameOver]);
 
-  const restartGame = () => {
-    bird.current = { y: 150, velocity: 0 };
-    pipes.current = [];
-    setGameOver(false);
-    setScore(0);
-  };
-
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900">
-      <div className="text-white mb-4">Score: {score}</div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 p-2">
+      <div className="text-white mb-4 text-xl">Score: {score}</div>
       <canvas
         ref={canvasRef}
-        width={800}
-        height={400}
-        className="border border-white"
+        className="border border-white touch-none"
       />
       {gameOver && (
         <button
-          onClick={restartGame}
+          onClick={() => {
+            bird.current = { y: 150, velocity: 0 };
+            pipes.current = [];
+            setGameOver(false);
+            setScore(0);
+          }}
           className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
         >
           Play Again
         </button>
       )}
-      <div className="text-white mt-4">
-        Press SPACE or click to jump
+      <div className="text-white mt-4 text-center">
+        Press SPACE or tap to jump
       </div>
     </div>
   );
